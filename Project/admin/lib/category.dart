@@ -1,0 +1,177 @@
+import 'package:admin/main.dart';
+import 'package:flutter/material.dart';
+
+class Category extends StatefulWidget {
+  const Category({super.key});
+
+  @override
+  State<Category> createState() => _CategorytState();
+}
+
+class _CategorytState extends State<Category> {
+  TextEditingController categoryController = TextEditingController();
+  List<Map<String, dynamic>> fetchcategory = [];
+
+@override
+void initState(){
+  super.initState();
+  fetchdata();
+}
+
+  Future<void> insert() async {
+    try {
+      await supabase
+          .from("tbl_category")
+          .insert({'category_name': categoryController.text});
+      fetchdata();
+      print("inserted");
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Data inserted successfully")));
+    } catch (e) {
+      print("Error $e");
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("insert Failed:$e")));
+    }
+  }
+
+  Future<void> fetchdata() async {
+    try {
+      final response = await supabase.from("tbl_category").select();
+      setState(() {
+        fetchcategory = response;
+      });
+    } catch (e) {}
+  }
+
+  Future<void> delete(int id) async {
+    try {
+      await supabase.from('tbl_category').delete().eq('id', id);
+      fetchdata();
+      categoryController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Deleted"),
+      ));
+    } catch (e) {
+      print("Error deleting $e");
+    }
+  }
+
+  int eid=0;
+
+  Future<void> editcategory() async
+  {
+    try {
+      await supabase.from("tbl_category").update({'category_name':categoryController.text}).eq("id", eid);
+       fetchdata();
+       categoryController.clear();
+       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Updated"),
+      ));
+    } catch (e) {
+       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text("Error $e"),
+      ));
+      
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: EdgeInsets.symmetric(
+        vertical: 20,
+        horizontal: 80,
+      ),
+      children: [
+        Form(
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              vertical: 20,
+              horizontal: 50,
+            ),
+            decoration: BoxDecoration(
+                color: Colors.blueGrey,
+                borderRadius: BorderRadius.circular(50)),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: TextFormField(
+                    controller: categoryController,
+                    decoration: InputDecoration(
+                      hintText: "Category",
+                      border: OutlineInputBorder(),
+                      fillColor: Colors.white,
+                      filled: true,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  width: 20,
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (eid==0)
+                    {
+                      insert();
+                    }
+                    else
+                    {
+                      editcategory();
+                    }
+                  },
+                  child: Text("Submit"),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 20,
+        ),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white54,
+          ),
+          margin: EdgeInsets.all(20),
+          padding: EdgeInsets.all(20),
+          child: ListView.separated(
+            separatorBuilder: (context, index) {
+              return Divider();
+            },
+            shrinkWrap: true,
+            itemCount: fetchcategory.length,
+            itemBuilder: (context, index) {
+              final _category = fetchcategory[index];
+              return ListTile(
+                leading: Text(
+                  _category['category_name'],
+                ),
+                trailing: SizedBox(
+                  width: 100,
+                  child: Row(
+                    children: [
+                      IconButton(
+                          onPressed: () {
+                            delete(_category['id']);
+                          },
+                          icon: Icon(Icons.delete_forever_outlined)),
+                        IconButton(onPressed: () {
+                          setState(() {
+                            categoryController.text=_category['category_name'];
+                            eid=_category['id'];
+                          });
+                        }, icon: Icon(Icons.edit))
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        )
+      ],
+    );
+  }
+}
