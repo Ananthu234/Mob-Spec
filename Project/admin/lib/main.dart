@@ -1,4 +1,6 @@
 import 'package:admin/dashboard.dart';
+import 'package:admin/district.dart';
+import 'package:admin/login.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 Future<void> main() async {
@@ -9,7 +11,6 @@ Future<void> main() async {
   runApp(const MainApp());
 }
 final supabase=Supabase.instance.client;
-
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
@@ -17,7 +18,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: Dashboard()
+      home: Dashboard(),
     );
   }
 }

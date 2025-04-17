@@ -1,5 +1,7 @@
 import 'package:admin/main.dart';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:intl/intl.dart';
 
 class Category extends StatefulWidget {
   const Category({super.key});
@@ -10,7 +12,38 @@ class Category extends StatefulWidget {
 
 class _CategorytState extends State<Category> {
   TextEditingController categoryController = TextEditingController();
+  TextEditingController photocontroller = TextEditingController();
   List<Map<String, dynamic>> fetchcategory = [];
+  PlatformFile? photo;
+
+  Future<void> handleImagePick() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+    );
+    if (result != null) {
+      setState(() {
+        photo = result.files.first;
+        photocontroller.text = result.files.first.name;
+      });
+    }
+  }
+
+  Future<String?> photoUpload() async {
+    try {
+      final bucketName = 'photo';
+      String formattedDate = DateFormat('dd-MM-yyyy-HH-mm').format(DateTime.now());
+      final filePath = "$formattedDate-${photo!.name}";
+      await supabase.storage.from(bucketName).uploadBinary(
+            filePath,
+            photo!.bytes!,
+          );
+      return supabase.storage.from(bucketName).getPublicUrl(filePath);
+    } catch (e) {
+      print("Error photo upload: $e");
+      return null;
+    }
+  }
+
 
 @override
 void initState(){
@@ -20,9 +53,12 @@ void initState(){
 
   Future<void> insert() async {
     try {
+      String? photoUrl = await photoUpload();
       await supabase
           .from("tbl_category")
-          .insert({'category_name': categoryController.text});
+          .insert({'category_name': categoryController.text,
+            'category_photo':photoUrl});
+      categoryController.clear();
       fetchdata();
       print("inserted");
       ScaffoldMessenger.of(context)
@@ -90,8 +126,8 @@ void initState(){
               horizontal: 50,
             ),
             decoration: BoxDecoration(
-                color: Colors.blueGrey,
-                borderRadius: BorderRadius.circular(50)),
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(10)),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -106,6 +142,22 @@ void initState(){
                       filled: true,
                     ),
                   ),
+                ),
+                SizedBox(
+                  width: 20,
+                ),
+                 Expanded(
+                  child: TextFormField(
+                    onTap: handleImagePick,
+                    readOnly: true,
+                      controller: photocontroller,
+                      decoration: InputDecoration(
+                        hintText: "categoryPhoto",
+                        border: OutlineInputBorder(),
+                        fillColor: Colors.white,
+                        filled: true,
+                      ),
+                    ),
                 ),
                 SizedBox(
                   width: 20,
@@ -133,7 +185,7 @@ void initState(){
         Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            color: Colors.white54,
+            color: Colors.white,
           ),
           margin: EdgeInsets.all(20),
           padding: EdgeInsets.all(20),
@@ -146,7 +198,10 @@ void initState(){
             itemBuilder: (context, index) {
               final _category = fetchcategory[index];
               return ListTile(
-                leading: Text(
+                leading:CircleAvatar(
+                  backgroundImage: NetworkImage(_category['category_photo']),
+                ),
+                title: Text(
                   _category['category_name'],
                 ),
                 trailing: SizedBox(
@@ -161,13 +216,17 @@ void initState(){
                         IconButton(onPressed: () {
                           setState(() {
                             categoryController.text=_category['category_name'];
+                            photocontroller.text=_category['category_photo'];
                             eid=_category['id'];
                           });
                         }, icon: Icon(Icons.edit))
                     ],
                   ),
+                
                 ),
+              
               );
+          
             },
           ),
         )
